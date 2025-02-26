@@ -100,6 +100,37 @@ export const TaskData = [
     category: "Shopping",
     status: TaskStatus.DONE,
   },
+  {
+    id: "11",
+    title: "Répondre aux emails",
+    description: "Vérifier la boîte mail et répondre aux messages importants",
+    creationDate: "2025-02-26",
+    dueDate: "2025-02-26",
+    priority: "Medium",
+    category: "Travail",
+    status: TaskStatus.TODO,
+  },
+  {
+    id: "12",
+    title: "Faire le ménage",
+    description: "Passer l'aspirateur et nettoyer la cuisine",
+    creationDate: "2025-02-24",
+    dueDate: "2025-02-25",
+    priority: "Medium",
+    category: "Loisirs",
+    status: TaskStatus.TODO,
+  },
+  {
+    id: "13",
+    title: "Acheter du matériel de bureau",
+    description: "Acheter des stylos et un carnet de notes",
+    creationDate: "2025-02-23",
+    dueDate: "2025-02-28",
+    priority: "Low",
+    category: "Shopping",
+    status: TaskStatus.DONE,
+  },
+
 
 ];
 

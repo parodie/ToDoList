@@ -6,7 +6,8 @@ const colors = {
       lightgrey: '#fbfaf9',
       golden: '#cfb194',
       coral: '#20b2aa',
-      lightGolden: '#dbc5af'
+      lightGolden: '#dbc5af',
+      veryLightGrey: '#f3efee'
   };
   
   export default colors;
