@@ -3,6 +3,7 @@ import { NavigationContainer } from "@react-navigation/native";
 import { createStackNavigator } from "@react-navigation/stack";
 import TaksListScreen from "./screens/tasksListScreen";
 import AddTaskScreen from "./screens/addTaskScreen";
+import EditTaskScreen from "./screens/editTaskScreen";
 
 const Stack = createStackNavigator();
 
@@ -12,6 +13,7 @@ export default function App() {
       <Stack.Navigator initialRouteName="Liste des taches">
         <Stack.Screen name="Liste des taches" component={TaksListScreen} />
         <Stack.Screen name="Add A Task" component={AddTaskScreen} />
+        <Stack.Screen name="Edit A Task" component={EditTaskScreen} />
       </Stack.Navigator>
     </NavigationContainer>
   );

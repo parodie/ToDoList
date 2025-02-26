@@ -9,159 +9,140 @@ import CustomButton from "../components/customButton";
 import { useNavigation } from "@react-navigation/native";
 
 function TaksListScreen() {
+  const [tasks, setTasks] = useState(TaskData);
+  const [checkedTasks, setCheckedTasks] = useState(new Set());
 
-    const [tasks, setTasks] = useState(TaskData)
-    const [checkedTasks, setCheckedTasks] = useState(new Set());
+  const data = CategoryData.map((category) => {
+    return {
+      id: category.id,
+      type: "category",
+      name: category.name,
+      tasks: tasks.filter((task) => task.category === category.name),
+    };
+  });
 
-    const data = CategoryData.map((category) => {
-        return {
-          id: category.id,
-          type: "category",
-          name: category.name,
-          tasks: tasks.filter((task) => task.category === category.name),
-        };
-      });
+  const navigation = useNavigation();
 
-      const navigation = useNavigation();
-    
+  function deleteHandler(id) {
+    Alert.alert("Delete Task", "Are you sure you want to delete this task?", [
+      {
+        text: "Cancel",
+        style: "cancel",
+      },
+      {
+        text: "Delete",
+        onPress: () => handleDelete(id),
+        style: "destructive",
+      },
+    ]);
+  }
 
+  function handleDelete(id) {
+    const updatedTasks = tasks.filter((task) => task.id !== id);
+    setTasks(updatedTasks);
+  }
 
-    function deleteHandler(id){
-        Alert.alert(
-            "Delete Task",
-            "Are you sure you want to delete this task?",
-            [
-                {
-                    text: "Cancel",
-                    style: "cancel"
-                },
-                {
-                    text: "Delete",
-                    onPress: () =>  handleDelete(id),
-                    style: "destructive"
-                }
-            ]
-        );
+  function handleModify(id) {
+    Alert.alert("Modify Task", "Do you want to modify this task?", [
+      {
+        text: "Cancel",
+        style: "cancel",
+      },
+      {
+        text: "Modify",
+        onPress: () => navigation.navigate("Edit A Task", { taskId: id }),
+        style: "default",
+      },
+    ]);
+  }
+
+  function handleAddTask() {
+    navigation.navigate("Add A Task");
+  }
+
+  function handleCheck(id) {
+    const updatedCheckedTasks = new Set(checkedTasks);
+
+    if (updatedCheckedTasks.has(id)) {
+      updatedCheckedTasks.delete(id);
+    } else {
+      updatedCheckedTasks.add(id);
     }
 
-    function handleDelete(id){
-        const updatedTasks = tasks.filter((task) => task.id !== id);
-        setTasks(updatedTasks);
+    setCheckedTasks(updatedCheckedTasks);
+  }
+
+  function renderItem(itemData) {
+    if (itemData.item.type === "category") {
+      return (
+        <View style={styles.categoryContainer}>
+          <Text style={styles.categoryTitle}>
+            {itemData.item.name.toUpperCase()}
+          </Text>
+          {itemData.item.tasks.map((task) => (
+            <TaskItem
+              key={task.id}
+              id={task.id}
+              title={task.title}
+              onDelete={deleteHandler}
+              onModify={handleModify}
+              onToggleChecked={handleCheck}
+              isChecked={checkedTasks.has(task.id)}
+            />
+          ))}
+        </View>
+      );
     }
-
-    function handleModify(id){
-        //redirect to modify screen
-        Alert.alert(
-            "Modify Task",
-            "Do you want to modify this task?",
-            [
-                {
-                    text: "Cancel",
-                    style: "cancel"
-                },
-                {
-                    text: "Modify",
-                    onPress: () => {
-                        console.log("Task modified!"); 
-                    },
-                    style: "default"
-                }
-            ]
-        );
-    }
-
-
-
-    function handleAddTask(){
-        navigation.navigate('Add A Task')
-    }
-
-    function handleCheck(id){
-        const updatedCheckedTasks = new Set(checkedTasks);
-
-        if(updatedCheckedTasks.has(id)){
-            updatedCheckedTasks.delete(id);
-        }else{
-            updatedCheckedTasks.add(id)
-        }
-
-        setCheckedTasks(updatedCheckedTasks);
-    }
-
-
-    function renderItem(itemData) {
-
-        if (itemData.item.type === "category") {
-          return (
-            <View style={styles.categoryContainer}>
-              <Text style={styles.categoryTitle}>{itemData.item.name.toUpperCase()}</Text>
-              {itemData.item.tasks.map((task) => (
-                <TaskItem 
-                    key={task.id} 
-                    id={task.id} 
-                    title={task.title} 
-                    onDelete={deleteHandler} 
-                    onModify={handleModify}
-                    onToggleChecked={handleCheck}
-                    isChecked={checkedTasks.has(task.id)}
-                />
-              ))}
-            </View>
-          );
-        }
-    }
-
+  }
 
   return (
     <View style={styles.container}>
-        <View style={styles.listStyle}>
-            <FlatList
-                data={data}
-                renderItem={renderItem}
-                keyExtractor={(item) => item.id} 
-                
-            />
-        </View>
-        <CustomButton 
-                title="Ajouter une tache"
-                onPress={handleAddTask}
-                textColor={colors.cream}
-                style={styles.addButton}
-            />
-  </View>
+      <View style={styles.listStyle}>
+        <FlatList
+          data={data}
+          renderItem={renderItem}
+          keyExtractor={(item) => item.id}
+        />
+      </View>
+      <CustomButton
+        title="Ajouter une tache"
+        onPress={handleAddTask}
+        textColor={colors.cream}
+        style={styles.addButton}
+      />
+    </View>
   );
 }
 
 export default TaksListScreen;
 
 const styles = StyleSheet.create({
-    container: {
-        flex: 1,
-        backgroundColor: "#ffffff",  
-        paddingTop: 20,
-        paddingHorizontal: 20,
-        justifyContent: 'flex-start'
-      },
-      categoryContainer: {
-        marginBottom: 20,
-      },
-      categoryTitle: {
-        fontSize: 14,
-        marginBottom: 10,
-        color: colors.golden,
-      },
-      addButton: {
-        position: 'absolute',  
-        bottom: 30,           
-        left: '20%',           
-        transform: [{ translateX: -50 }], 
-        paddingVertical: 14,
-        paddingHorizontal: 130,
-        borderRadius: 5,
-        elevation: 5,  
-      },
-      listStyle:{
-        paddingBottom: 90,
-      }
-      
+  container: {
+    flex: 1,
+    backgroundColor: "#ffffff",
+    paddingTop: 20,
+    paddingHorizontal: 20,
+    justifyContent: "flex-start",
+  },
+  categoryContainer: {
+    marginBottom: 20,
+  },
+  categoryTitle: {
+    fontSize: 14,
+    marginBottom: 10,
+    color: colors.golden,
+  },
+  addButton: {
+    position: "absolute",
+    bottom: 30,
+    left: "20%",
+    transform: [{ translateX: -50 }],
+    paddingVertical: 14,
+    paddingHorizontal: 130,
+    borderRadius: 5,
+    elevation: 5,
+  },
+  listStyle: {
+    paddingBottom: 90,
+  },
 });

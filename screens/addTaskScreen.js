@@ -1,7 +1,10 @@
 import { View, Text, StyleSheet, TextInput, Button } from "react-native";
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import TaskPriority from "../models/TaskPriority";
 import { Picker } from "@react-native-picker/picker";
+import CustomButton from "../components/customButton";
+import colors from "../colors";
+import { useNavigation } from "@react-navigation/native";
 
 function AddTaskScreen() {
   const [newTask, setNewTask] = useState({
@@ -15,7 +18,15 @@ function AddTaskScreen() {
   const [taskId, setTaskId] = useState(1);
   const [tasks, setTasks] = useState([]);
   const priorities = [TaskPriority.HIGH, TaskPriority.MEDIUM, TaskPriority.LOW];
-  const [categories, setCategories] = useState("");
+  const [categories, setCategories] = useState([
+    "Work",
+    "Personal",
+    "Shopping",
+  ]);
+  const [newCategory, setNewCategory] = useState("");
+  const navigation = useNavigation();
+
+  function handleAddCategory() {}
 
   function addTask() {
     const task = {
@@ -38,6 +49,7 @@ function AddTaskScreen() {
       priority: TaskPriority.HIGH,
       category: "",
     });
+    navigation.navigate("Liste des taches");
   }
 
   return (
@@ -75,7 +87,37 @@ function AddTaskScreen() {
             <Picker.Item key={index} label={priority} value={priority} />
           ))}
         </Picker>
-        <Button title="Save" onPress={addTask} />
+        <Picker
+          selectedValue={newTask.category}
+          style={styles.picker}
+          onValueChange={(itemValue) =>
+            setNewTask({ ...newTask, category: itemValue })
+          }
+        >
+          {categories.map((category, index) => (
+            <Picker.Item key={index} label={category} value={category} />
+          ))}
+        </Picker>
+        <View style={styles.addCategory}>
+          <TextInput
+            style={styles.inputCat}
+            placeholder="Add new category..."
+            value={newCategory}
+            onChangeText={setNewCategory}
+          />
+          <CustomButton
+            title="Add"
+            onPress={handleAddCategory}
+            textColor={colors.cream}
+            style={styles.addButton}
+          />
+        </View>
+        <CustomButton
+          title="Save"
+          onPress={addTask}
+          textColor={colors.cream}
+          style={styles.addButton}
+        />
       </View>
     </View>
   );
@@ -118,6 +160,15 @@ const styles = StyleSheet.create({
     marginBottom: 10,
     color: "black",
     fontSize: 16,
+  },
+  addCategory: {
+    flexDirection: "row",
+    alignItems: "center",
+    marginBottom: 10,
+  },
+  inputCat: {
+    flex: 1,
+    marginRight: 10,
   },
 });
 
