@@ -1,5 +1,4 @@
-import { StatusBar } from "expo-status-bar";
-import { StyleSheet, Text, View } from "react-native";
+import { StyleSheet } from "react-native";
 import { NavigationContainer } from "@react-navigation/native";
 import { createStackNavigator } from "@react-navigation/stack";
 import TaksListScreen from "./screens/tasksListScreen";
@@ -10,8 +9,8 @@ const Stack = createStackNavigator();
 export default function App() {
   return (
     <NavigationContainer>
-      <Stack.Navigator>
-        <Stack.Screen name="My List Of Tasks" component={TaksListScreen} />
+      <Stack.Navigator initialRouteName="Liste des taches">
+        <Stack.Screen name="Liste des taches" component={TaksListScreen} />
         <Stack.Screen name="Add A Task" component={AddTaskScreen} />
       </Stack.Navigator>
     </NavigationContainer>
