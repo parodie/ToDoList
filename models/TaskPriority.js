@@ -1,7 +1,6 @@
 const TaskPriority = Object.freeze({
-  LOW: "Low",
-  MEDIUM: "Medium",
-  HIGH: "High",
+  Faible: "faible",
+  Moyen: "moyen",
+  Elevé: "eleve",
 });
-
 export default TaskPriority;

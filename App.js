@@ -12,8 +12,8 @@ export default function App() {
     <NavigationContainer>
       <Stack.Navigator initialRouteName="Liste des taches">
         <Stack.Screen name="Liste des taches" component={TaksListScreen} />
-        <Stack.Screen name="Add A Task" component={AddTaskScreen} />
-        <Stack.Screen name="Edit A Task" component={EditTaskScreen} />
+        <Stack.Screen name="Ajouter une tache" component={AddTaskScreen} />
+        <Stack.Screen name="Modifier la tache" component={EditTaskScreen} />
       </Stack.Navigator>
     </NavigationContainer>
   );

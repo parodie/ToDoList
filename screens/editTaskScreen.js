@@ -1,10 +1,11 @@
-import { View, Text, StyleSheet, TextInput, Button } from "react-native";
-import { useState, useEffect } from "react";
+import { View, Text, StyleSheet, TextInput } from "react-native";
+import { useState } from "react";
 import TaskPriority from "../models/TaskPriority";
-import { Picker } from "@react-native-picker/picker";
 import TaskData from "../data/TaskData";
 import CustomButton from "../components/customButton";
 import colors from "../colors";
+import RNPickerSelect from "react-native-picker-select";
+
 
 function EditTaskScreen({ route, navigation }) {
   const { taskId } = route.params;
@@ -27,7 +28,7 @@ function EditTaskScreen({ route, navigation }) {
       <View style={styles.form}>
         <TextInput
           style={styles.input}
-          placeholder="Task title..."
+          placeholder="Titre..."
           value={editedTask.title}
           onChangeText={(text) => setEditedTask({ ...editedTask, title: text })}
         />
@@ -39,38 +40,43 @@ function EditTaskScreen({ route, navigation }) {
             setEditedTask({ ...editedTask, description: text })
           }
         />
-        <TextInput
+        {/*<TextInput
           style={styles.input}
           placeholder="Due Date (YYYY-MM-DD)"
           value={editedTask.dueDate}
           onChangeText={(text) =>
             setEditedTask({ ...editedTask, dueDate: text })
           }
+        />*/}
+        {/* Priority Picker */}
+        <RNPickerSelect
+          onValueChange={(value) => setNewTask({ ...newTask, priority: value })}
+          items={priorities.map((priority) => ({
+            label: priority,
+            value: priority,
+          }))}
+          value={newTask.priority}
+          style={pickerSelectStyles}
+          placeholder={{
+            label: 'Selectionner la Priorité...',  
+          }}
         />
-        <Picker
-          selectedValue={editedTask.priority}
-          style={styles.picker}
-          onValueChange={(itemValue) =>
-            setEditedTask({ ...editedTask, priority: itemValue })
-          }
-        >
-          {priorities.map((priority, index) => (
-            <Picker.Item key={index} label={priority} value={priority} />
-          ))}
-        </Picker>
-        <Picker
-          selectedValue={editedTask.category}
-          style={styles.picker}
-          onValueChange={(itemValue) =>
-            setEditedTask({ ...editedTask, category: itemValue })
-          }
-        >
-          {categories.map((category, index) => (
-            <Picker.Item key={index} label={category} value={category} />
-          ))}
-        </Picker>
+        
+        {/* Category Picker */}
+        <RNPickerSelect
+          onValueChange={(value) => setNewTask({ ...newTask, category: value })}
+          items={categories.map((category) => ({
+            label: category,
+            value: category,
+          }))}
+          value={newTask.category}
+          style={pickerSelectStyles}
+          placeholder={{
+            label: 'Selectionner une Categorie...',  
+          }}
+        />
         <CustomButton
-          title="Save Changes"
+          title="Modifier"
           onPress={handleSave}
           textColor={colors.cream}
           style={styles.addButton}
@@ -79,6 +85,32 @@ function EditTaskScreen({ route, navigation }) {
     </View>
   );
 }
+
+const pickerSelectStyles = StyleSheet.create({
+  inputIOS: {
+    height: 40,
+    width: "100%",
+    backgroundColor: colors.lightgrey,
+    borderWidth: 1,
+    borderColor: "#ccc",
+    borderRadius: 8,
+    paddingLeft: 10,
+    paddingRight: 10,
+    marginBottom: 20,
+    color: colors.black,
+  },
+  inputAndroid: {
+    height: 40,
+    width: "100%",
+    backgroundColor: colors.lightgrey,
+    borderWidth: 1,
+    borderColor: "#ccc",
+    borderRadius: 8,
+    paddingLeft: 10,
+    marginBottom: 20,
+    color: colors.black,
+  },
+});
 
 const styles = StyleSheet.create({
   container: {
@@ -108,16 +140,10 @@ const styles = StyleSheet.create({
     marginBottom: 10,
     color: "black",
   },
-  picker: {
-    height: 60,
-    borderWidth: 1,
-    borderColor: "#ccc",
-    borderRadius: 8,
-    padding: 10,
-    marginBottom: 10,
-    color: "black",
-    fontSize: 16,
-  },
+  
+  addButton:{
+    paddingVertical: 12,
+  }
 });
 
 export default EditTaskScreen;

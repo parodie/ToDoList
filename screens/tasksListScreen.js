@@ -1,27 +1,115 @@
-import { View, StyleSheet, Alert, Text } from "react-native";
+import { View, StyleSheet, Alert, Text, ActivityIndicator } from "react-native";
 import { FlatList } from "react-native-gesture-handler";
-import TaskData from "../data/TaskData";
-import CategoryData from "../data/CategoryData";
 import TaskItem from "../components/taskItem";
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import colors from "../colors";
 import CustomButton from "../components/customButton";
 import { useNavigation } from "@react-navigation/native";
+import AsyncStorage from "@react-native-async-storage/async-storage";
 
 function TaksListScreen() {
-  const [tasks, setTasks] = useState(TaskData);
+  //const [tasks, setTasks] = useState(TaskData);
+  const [tasks, setTasks] = useState([]);
   const [checkedTasks, setCheckedTasks] = useState(new Set());
-
-  const data = CategoryData.map((category) => {
-    return {
-      id: category.id,
-      type: "category",
-      name: category.name,
-      tasks: tasks.filter((task) => task.category === category.name),
-    };
-  });
-
+  const [categories, setCategories] = useState([]);
+  const [loading, setLoading] = useState(true);
   const navigation = useNavigation();
+
+  useEffect(() => {
+    const InitializeApp = async () => {
+      try {
+        //fetch user id if exists else create a new one (1)
+        const user_id = await InitializeUser();
+        console.log('User ID:', user_id);
+  
+        //fetch user specific categories (2)
+        const categories = await fetchCategories(user_id);
+        setCategories(categories)
+        console.log("cats", categories)
+  
+        //fetch user specific tasks (3)
+        const tasks = await fetchTasks(user_id);
+        setTasks(tasks)
+
+        console.log("Fetched tasks:", tasks, "Type:", typeof tasks, "Is array:", Array.isArray(tasks));
+
+  
+      }catch(error){
+        console.error('Error initializing app:', error);
+        Alert.alert('Error', 'Could not connect to the server. Please check your connection and try again.');
+      }finally{
+        setLoading(false)
+      }
+    }
+
+    InitializeApp()
+   },[])
+  
+
+  //--------------------(1)----------------------
+  const InitializeUser = async () => {
+    console.log("Starting app initialization...");
+      
+    console.log("Getting user ID...");
+    let userId = await AsyncStorage.getItem('user_id');
+    console.log("user_id : ", userId);
+    const url = 'http://172.20.10.13:8000/api/categories/initialize_user/';
+    if(!userId){
+      const response = await fetch(url, {
+        method: 'POST',
+        headers: {
+          'Content-type': 'application/json',
+        },
+        body: JSON.stringify({})
+      });
+
+      console.log("Response status:", response.status);
+      console.log("Response headers:", JSON.stringify(response.headers))
+
+      const data = await response.json();
+      console.log("data : ", data)
+
+      userId = data.user_id;
+      console.log("userId : ", userId)
+
+      await AsyncStorage.setItem('user_id', userId)
+    }
+    return userId;
+  }
+
+  //--------------------(2)----------------------
+  const fetchCategories = async (userId) => {
+    const url = `http://172.20.10.13:8000/api/categories/?user_id=${userId}`;
+    const response = await fetch(url)
+    console.log('user_id_again  ', userId)
+    const data = await response.json();
+    console.log('data: ', data)
+    return data;
+  }
+
+  //--------------------(3)----------------------
+  const fetchTasks = async(userId) => {
+    const url = `http://172.20.10.13:8000/api/tasks/?user_id=${userId}`;
+    const response = await fetch(url)
+
+    const data = await response.json();
+    console.log("Tasks API Response:", data); 
+
+    return data.tasks || [];
+  }
+
+  //-----------------(4)------------------------
+  const deleteTask = async(taskId) => {
+    const user_id = await AsyncStorage.getItem('user_id');
+    const url = `http://172.20.10.13:8000/api/tasks/${taskId}/`;
+    await fetch(url, {
+      method: 'DELETE', 
+        headers: {
+          'user_id': user_id,
+      }
+    })
+    setTasks(tasks.filter((task) => task.id !== taskId));
+  }
 
   function deleteHandler(id) {
     Alert.alert("Delete Task", "Are you sure you want to delete this task?", [
@@ -31,16 +119,21 @@ function TaksListScreen() {
       },
       {
         text: "Delete",
-        onPress: () => handleDelete(id),
+        onPress: () => deleteTask(id),
         style: "destructive",
       },
     ]);
   }
 
-  function handleDelete(id) {
-    const updatedTasks = tasks.filter((task) => task.id !== id);
-    setTasks(updatedTasks);
-  }
+  const data = categories.map((category) => {
+    return {
+      id: category.id,
+      type: "category",
+      name: category.name,
+      tasks: tasks ? tasks.filter((task) => task.category === category.name) : [],
+    };
+  });
+
 
   function handleModify(id) {
     Alert.alert("Modify Task", "Do you want to modify this task?", [
@@ -50,14 +143,16 @@ function TaksListScreen() {
       },
       {
         text: "Modify",
-        onPress: () => navigation.navigate("Edit A Task", { taskId: id }),
+        onPress: () => navigation.navigate("Modifier la tache", { taskId: id }),
         style: "default",
       },
     ]);
   }
 
   function handleAddTask() {
-    navigation.navigate("Add A Task");
+    navigation.navigate("Ajouter une tache", {
+      categs: categories
+    });
   }
 
   function handleCheck(id) {
@@ -79,20 +174,38 @@ function TaksListScreen() {
           <Text style={styles.categoryTitle}>
             {itemData.item.name.toUpperCase()}
           </Text>
-          {itemData.item.tasks.map((task) => (
-            <TaskItem
-              key={task.id}
-              id={task.id}
-              title={task.title}
-              onDelete={deleteHandler}
-              onModify={handleModify}
-              onToggleChecked={handleCheck}
-              isChecked={checkedTasks.has(task.id)}
-            />
-          ))}
+          {itemData.item.tasks?.length > 0 ? (
+            itemData.item.tasks.map((task) => (
+              <TaskItem
+                key={task.id}
+                id={task.id}
+                title={task.title}
+                onDelete={deleteHandler}
+                onModify={handleModify}
+                onToggleChecked={handleCheck}
+                isChecked={checkedTasks.has(task.id)}
+              />
+            ))
+          ) : (
+            <View>
+              <Text></Text>
+              <Text></Text>
+              <Text></Text> 
+              <Text></Text>
+              <Text></Text>
+            </View>
+          )}
         </View>
       );
     }
+  }
+
+  if (loading) {
+    return (
+      <View style={{ flex: 1, justifyContent: 'center', alignItems: 'center' }}>
+        <ActivityIndicator size="large" color={colors.lightGolden} />
+      </View>
+    );
   }
 
   return (
