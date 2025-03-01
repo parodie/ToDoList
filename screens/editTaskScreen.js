@@ -1,29 +1,89 @@
 import { View, Text, StyleSheet, TextInput } from "react-native";
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import TaskPriority from "../models/TaskPriority";
-import TaskData from "../data/TaskData";
 import CustomButton from "../components/customButton";
 import colors from "../colors";
 import RNPickerSelect from "react-native-picker-select";
-
+import AsyncStorage from "@react-native-async-storage/async-storage";
 
 function EditTaskScreen({ route, navigation }) {
-  const { taskId } = route.params;
-  const task = TaskData.find((t) => t.id === taskId);
+  const { taskId, categs } = route.params;
+  const [categories, setCategories] = useState(
+    categs.map((categorie) => ({
+      label: categorie.name,
+      value: categorie.id,
+    })) || []
+  );
 
-  const [editedTask, setEditedTask] = useState(task);
+  const [editedTask, setEditedTask] = useState({
+    title: "",
+    description: "",
+    priority: TaskPriority.Moyen,
+    category: "",
+  });
 
-  const priorities = [TaskPriority.HIGH, TaskPriority.MEDIUM, TaskPriority.LOW];
-  const categories = ["Work", "Personal", "Shopping"];
+  const priorities = [
+    { label: "Elevé", value: TaskPriority.Elevé },
+    { label: "Moyen", value: TaskPriority.Moyen },
+    { label: "Faible", value: TaskPriority.Faible },
+  ];
 
-  function handleSave() {
-    navigation.goBack();
+  useEffect(() => {
+    if (taskId) {
+      async function fetchTask() {
+        const task = await fetch(
+          `http://192.168.100.71:8000/api/tasks/${taskId}/`
+        );
+        if (task.ok) {
+          const taskData = await task.json();
+          setEditedTask(taskData);
+        } else {
+          alert("Tâche non trouvée.");
+        }
+      }
+      fetchTask();
+    } else {
+      alert("ID de tâche manquant.");
+    }
+  }, [taskId]);
+
+  async function handleSave() {
+    const user_id = await AsyncStorage.getItem("user_id");
+    const updatedTaskData = {};
+
+    if (editedTask.title.trim()) updatedTaskData.title = editedTask.title;
+    if (editedTask.description.trim())
+      updatedTaskData.description = editedTask.description;
+    if (editedTask.priority) updatedTaskData.priority = editedTask.priority;
+    if (editedTask.category) updatedTaskData.category = editedTask.category;
+
+    if (user_id) updatedTaskData.user_id = user_id;
+
+    if (Object.keys(updatedTaskData).length > 0) {
+      fetch(`http://192.168.100.71:8000/api/tasks/${taskId}/`, {
+        method: "PUT",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify(updatedTaskData),
+      })
+        .then((response) => response.json())
+        .then((data) => {
+          alert("Tâche mise à jour avec succès !");
+          navigation.goBack();
+        })
+        .catch((error) => {
+          alert("Erreur lors de la mise à jour de la tâche : " + error.message);
+        });
+    } else {
+      alert("Aucune modification détectée.");
+    }
   }
 
   return (
     <View style={styles.container}>
       <View style={styles.titleContainer}>
-        <Text style={styles.title}>Edit Task</Text>
+        <Text style={styles.title}>Modifier la tâche</Text>
       </View>
       <View style={styles.form}>
         <TextInput
@@ -40,43 +100,34 @@ function EditTaskScreen({ route, navigation }) {
             setEditedTask({ ...editedTask, description: text })
           }
         />
-        {/*<TextInput
-          style={styles.input}
-          placeholder="Due Date (YYYY-MM-DD)"
-          value={editedTask.dueDate}
-          onChangeText={(text) =>
-            setEditedTask({ ...editedTask, dueDate: text })
-          }
-        />*/}
+
         {/* Priority Picker */}
         <RNPickerSelect
-          onValueChange={(value) => setNewTask({ ...newTask, priority: value })}
-          items={priorities.map((priority) => ({
-            label: priority,
-            value: priority,
-          }))}
-          value={newTask.priority}
+          onValueChange={(value) =>
+            setEditedTask({ ...editedTask, priority: value })
+          }
+          items={priorities}
+          value={editedTask.priority}
           style={pickerSelectStyles}
-          placeholder={{
-            label: 'Selectionner la Priorité...',  
-          }}
+          placeholder={{ label: "Sélectionner la priorité..." }}
         />
-        
+
         {/* Category Picker */}
         <RNPickerSelect
-          onValueChange={(value) => setNewTask({ ...newTask, category: value })}
+          onValueChange={(value) =>
+            setEditedTask({ ...editedTask, category: value })
+          }
           items={categories.map((category) => ({
-            label: category,
-            value: category,
+            label: category.label,
+            value: category.value,
           }))}
-          value={newTask.category}
+          value={editedTask.category}
           style={pickerSelectStyles}
-          placeholder={{
-            label: 'Selectionner une Categorie...',  
-          }}
+          placeholder={{ label: "Sélectionner une catégorie..." }}
         />
+
         <CustomButton
-          title="Modifier"
+          title="Sauvegarder"
           onPress={handleSave}
           textColor={colors.cream}
           style={styles.addButton}
@@ -140,10 +191,9 @@ const styles = StyleSheet.create({
     marginBottom: 10,
     color: "black",
   },
-  
-  addButton:{
+  addButton: {
     paddingVertical: 12,
-  }
+  },
 });
 
 export default EditTaskScreen;
