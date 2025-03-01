@@ -1,17 +1,22 @@
-import { View, Text, StyleSheet, TextInput, ScrollView } from "react-native";
+import { View, Text, StyleSheet, TextInput, ScrollView, ActivityIndicator } from "react-native";
 import { useState } from "react";
 import TaskPriority from "../models/TaskPriority";
 import CustomButton from "../components/customButton";
 import colors from "../colors";
-import { useNavigation } from "@react-navigation/native";
+import { useNavigation, useRoute } from "@react-navigation/native";
 import RNPickerSelect from "react-native-picker-select";
 import AsyncStorage from "@react-native-async-storage/async-storage";
-import { useRoute } from "@react-navigation/native";
-import { Ionicons } from "@expo/vector-icons";
+import { useContext } from "react";
+import { TasksContext } from "../context/tasksContext";
+
 
 function AddTaskScreen() {
-  const route = useRoute();
-  const { categs } = route.params || {};
+  const route = useRoute()
+  const { fetchTasks, fetchCategories } = useContext(TasksContext);
+  const [newCategory, setNewCategory] = useState("");
+  const navigation = useNavigation();
+  const [loading, setLoading] = useState(false);
+  const {categs}= route.params || {};
 
   const [newTask, setNewTask] = useState({
     title: "",
@@ -20,28 +25,31 @@ function AddTaskScreen() {
     category: "",
   });
 
-  const [tasks, setTasks] = useState([]);
   const [categories, setCategories] = useState(
     categs.map((categorie) => ({
       label: categorie.name,
       value: categorie.id,
     })) || []
   );
+
   const priorities = [
     { label: "Elevé", value: TaskPriority.Elevé },
     { label: "Moyen", value: TaskPriority.Moyen },
     { label: "Faible", value: TaskPriority.Faible },
   ];
-  const [newCategory, setNewCategory] = useState("");
-  const navigation = useNavigation();
+  
+
+  //-----------------------------------------------------------
 
   async function handleAddCategory() {
+    
     if (!newCategory.trim()) {
       alert("Veuillez entrer une catégorie valide.");
       return;
     }
-
+    //----------------------------
     try {
+      setLoading(true);
       const userId = await AsyncStorage.getItem("user_id");
       if (!userId) {
         alert("Utilisateur non authentifié");
@@ -51,7 +59,7 @@ function AddTaskScreen() {
       const categoryData = { name: newCategory, user_id: userId };
 
       const response = await fetch(
-        "http://192.168.100.71:8000/api/categories/add_category/",
+        "http://172.20.10.13:8000/api/categories/add_category/",
         {
           method: "POST",
           headers: { "Content-Type": "application/json" },
@@ -63,20 +71,27 @@ function AddTaskScreen() {
       const data = await response.json();
 
       if (data.category) {
+        await fetchCategories(userId);
+
         setCategories((prev) => [
           ...prev,
           { label: data.category.name, value: data.category.id },
         ]);
+
         setNewCategory("");
         alert("Catégorie ajoutée avec succès !");
+
       } else {
         alert("Erreur lors de l'ajout de la catégorie.");
       }
     } catch (error) {
       alert(`Erreur de réseau ou serveur : ${error.message}`);
+    }finally{
+      setLoading(false)
     }
   }
 
+  //-----------------------------------------------
   async function addTask() {
     if (!newTask.title || !newTask.description || !newTask.category) {
       alert("Veuillez remplir tous les champs requis !");
@@ -93,16 +108,21 @@ function AddTaskScreen() {
     };
 
     try {
-      const response = await fetch(`http://192.168.100.71:8000/api/tasks/`, {
+      setLoading(true)
+      const response = await fetch(`http://172.20.10.13:8000/api/tasks/`, {
         method: "POST",
-        headers: { "Content-Type": "application/json" },
+        headers: { 
+          "Content-Type": "application/json" 
+        },
         body: JSON.stringify(taskData),
       });
 
       if (!response.ok) throw new Error("Erreur lors de l'ajout de la tâche");
-      const newTaskFromServer = await response.json();
+      const newTask = await response.json();
 
-      setTasks((prev) => [...prev, newTaskFromServer]);
+      const user_id = await AsyncStorage.getItem("user_id");
+      await fetchTasks(user_id);
+
       setNewTask({
         title: "",
         description: "",
@@ -111,10 +131,20 @@ function AddTaskScreen() {
       });
 
       // Navigate to the task list
-      navigation.navigate("Liste des taches");
+      navigation.goBack();    
     } catch (error) {
       alert(`Erreur lors de l'ajout de la tâche : ${error.message}`);
+    }finally{
+      setLoading(false)
     }
+  }
+
+  if (loading) {
+    return (
+      <View style={{ flex: 1, justifyContent: "center", alignItems: "center" }}>
+        <ActivityIndicator size="large" color={colors.lightGolden} />
+      </View>
+    );
   }
 
   return (
@@ -166,9 +196,9 @@ function AddTaskScreen() {
             onChangeText={setNewCategory}
           />
           <CustomButton
-            iconName="Save"
+            iconName="save"
             onPress={handleAddCategory}
-            iconColor={colors.black}
+            iconColor={colors.cream}
             style={styles.addButton}
           />
         </View>
@@ -252,7 +282,7 @@ const styles = StyleSheet.create({
     padding: 10,
   },
   addButton: {
-    paddingVertical: 12,
+    paddingVertical: 10,
   },
 });
 

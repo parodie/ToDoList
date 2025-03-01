@@ -1,19 +1,26 @@
-import { View, Text, StyleSheet, TextInput } from "react-native";
-import { useState, useEffect } from "react";
+import { View, Text, StyleSheet, TextInput, ActivityIndicator } from "react-native";
+import { useState, useEffect, useContext } from "react";
 import TaskPriority from "../models/TaskPriority";
 import CustomButton from "../components/customButton";
 import colors from "../colors";
 import RNPickerSelect from "react-native-picker-select";
 import AsyncStorage from "@react-native-async-storage/async-storage";
+import { TasksContext } from "../context/tasksContext";
+
 
 function EditTaskScreen({ route, navigation }) {
+
+  const { fetchTasks, fetchCategories } = useContext(TasksContext)
   const { taskId, categs } = route.params;
+  const [loading, setLoading] = useState(true);
   const [categories, setCategories] = useState(
     categs.map((categorie) => ({
       label: categorie.name,
       value: categorie.id,
     })) || []
   );
+
+
 
   const [editedTask, setEditedTask] = useState({
     title: "",
@@ -31,8 +38,9 @@ function EditTaskScreen({ route, navigation }) {
   useEffect(() => {
     if (taskId) {
       async function fetchTask() {
+        try{
         const task = await fetch(
-          `http://192.168.100.71:8000/api/tasks/${taskId}/`
+          `http://172.20.10.13:8000/api/tasks/${taskId}/`
         );
         if (task.ok) {
           const taskData = await task.json();
@@ -40,50 +48,85 @@ function EditTaskScreen({ route, navigation }) {
         } else {
           alert("Tâche non trouvée.");
         }
+      }catch(error){
+        console.log("Erreur lors du chargement de la tâche: " + error.message);
+      }finally{
+        setLoading(false)
       }
-      fetchTask();
-    } else {
-      alert("ID de tâche manquant.");
     }
+
+    fetchTask();
+
+      } else {
+        alert("ID de tâche manquant.");
+        setLoading(false);
+      }
   }, [taskId]);
 
   async function handleSave() {
+    setLoading(true);
     const user_id = await AsyncStorage.getItem("user_id");
     const updatedTaskData = {};
 
-    if (editedTask.title.trim()) updatedTaskData.title = editedTask.title;
-    if (editedTask.description.trim())
+    if (editedTask.title.trim()){ 
+      updatedTaskData.title = editedTask.title;
+    }
+    if (editedTask.description.trim()){
       updatedTaskData.description = editedTask.description;
-    if (editedTask.priority) updatedTaskData.priority = editedTask.priority;
-    if (editedTask.category) updatedTaskData.category = editedTask.category;
-
-    if (user_id) updatedTaskData.user_id = user_id;
+    }
+    if (editedTask.priority) {
+      updatedTaskData.priority = editedTask.priority;
+    }
+    if (editedTask.category){ 
+      updatedTaskData.category = editedTask.category;
+    }
 
     if (Object.keys(updatedTaskData).length > 0) {
-      fetch(`http://192.168.100.71:8000/api/tasks/${taskId}/`, {
-        method: "PUT",
-        headers: {
-          "Content-Type": "application/json",
-        },
-        body: JSON.stringify(updatedTaskData),
-      })
-        .then((response) => response.json())
-        .then((data) => {
-          alert("Tâche mise à jour avec succès !");
-          navigation.goBack();
-        })
-        .catch((error) => {
-          alert("Erreur lors de la mise à jour de la tâche : " + error.message);
-        });
+      try {
+        const response = await fetch(
+          `http://172.20.10.13:8000/api/tasks/${taskId}/`,
+          {
+            method: "PUT",
+            headers: {
+              "Content-Type": "application/json",
+              user_id: user_id,
+            },
+            body: JSON.stringify(updatedTaskData),
+          }
+        );
+  
+        if (!response.ok) {
+          throw new Error(`HTTP Error: ${response.status}`);
+        }
+  
+        const data = await response.json();
+        await fetchTasks(user_id);
+
+        alert("Tâche mise à jour avec succès !");
+        navigation.goBack();
+      } catch (error) {
+        alert("Erreur lors de la mise à jour de la tâche : " + error.message);
+      } finally {
+        setLoading(false);
+      }
     } else {
       alert("Aucune modification détectée.");
+      setLoading(false); 
     }
+  }
+
+  if (loading) {
+    return (
+      <View style={{ flex: 1, justifyContent: "center", alignItems: "center" }}>
+        <ActivityIndicator size="large" color={colors.lightGolden} />
+      </View>
+    );
   }
 
   return (
     <View style={styles.container}>
       <View style={styles.titleContainer}>
-        <Text style={styles.title}>Modifier la tâche</Text>
+        <Text style={styles.title}></Text>
       </View>
       <View style={styles.form}>
         <TextInput

@@ -1,19 +1,22 @@
 import { View, StyleSheet, Alert, Text, ActivityIndicator } from "react-native";
 import { FlatList } from "react-native-gesture-handler";
 import TaskItem from "../components/taskItem";
-import { useEffect, useState } from "react";
+import { useEffect, useState, useContext } from "react";
 import colors from "../colors";
 import CustomButton from "../components/customButton";
 import { useNavigation } from "@react-navigation/native";
+import { TasksContext } from "../context/tasksContext";
 import AsyncStorage from "@react-native-async-storage/async-storage";
 
 function TasksListScreen() {
   //const [tasks, setTasks] = useState(TaskData);
-  const [tasks, setTasks] = useState([]);
+  //const [tasks, setTasks] = useState([]);
+  //const [categories, setCategories] = useState([]);
+  const { tasks, categories, fetchTasks, fetchCategories, deleteTask } = useContext(TasksContext);
   const [checkedTasks, setCheckedTasks] = useState(new Set());
-  const [categories, setCategories] = useState([]);
   const [loading, setLoading] = useState(true);
   const navigation = useNavigation();
+  
 
   useEffect(() => {
     const InitializeApp = async () => {
@@ -23,22 +26,24 @@ function TasksListScreen() {
         console.log("User ID:", user_id);
 
         //fetch user specific categories (2)
-        const categories = await fetchCategories(user_id);
-        setCategories(categories);
-        console.log("cats", categories);
+        const categs = await fetchCategories(user_id);
 
+        console.log("cats", categs);
         //fetch user specific tasks (3)
         const tasks = await fetchTasks(user_id);
-        setTasks(tasks);
 
-        console.log(
+        /*console.log(
           "Fetched tasks:",
           tasks,
           "Type:",
           typeof tasks,
           "Is array:",
           Array.isArray(tasks)
-        );
+        );*/
+
+        const completedTasks = tasks.filter((task) => task.completed).map((task)=> task.id)
+        setCheckedTasks(new Set(completedTasks));
+
       } catch (error) {
         console.error("Error initializing app:", error);
         Alert.alert(
@@ -54,13 +59,16 @@ function TasksListScreen() {
   }, []);
 
   //--------------------(1)----------------------
+
   const InitializeUser = async () => {
     console.log("Starting app initialization...");
-
     console.log("Getting user ID...");
+
     let userId = await AsyncStorage.getItem("user_id");
     console.log("user_id : ", userId);
-    const url = `http://192.168.100.71:8000/api/categories/initialize_user/`;
+
+    const url = `http://172.20.10.13:8000/api/categories/initialize_user/`;
+
     if (!userId) {
       const response = await fetch(url, {
         method: "POST",
@@ -84,63 +92,32 @@ function TasksListScreen() {
     return userId;
   };
 
-  //--------------------(2)----------------------
-  const fetchCategories = async (userId) => {
-    try {
-      const url = `http://192.168.100.71:8000/api/categories/?user_id=${userId}`;
-
-      const response = await fetch(url, {
-        method: "GET",
-        headers: {
-          "Content-type": "application/json",
-        },
-      });
-
-      if (!response.ok) {
-        throw new Error(`HTTP Error: ${response.status}`);
-      }
-
-      const data = await response.json();
-      console.log("data:", data);
-      return data;
-    } catch (error) {
-      console.error("Erreur réseau :", error.message);
-    }
-  };
-
-  //--------------------(3)----------------------
-  const fetchTasks = async (userId) => {
-    const url = `http://192.168.100.71:8000/api/tasks/?user_id=${userId}`;
-    const response = await fetch(url);
-
-    const data = await response.json();
-    console.log("Tasks API Response:", data);
-
-    return Array.isArray(data) ? data : data.tasks || [];
-  };
-
-  //-----------------(4)------------------------
-  const deleteTask = async (taskId) => {
-    const user_id = await AsyncStorage.getItem("user_id");
-    const url = `http://192.168.100.71:8000/api/tasks/${taskId}/`;
-    await fetch(url, {
-      method: "DELETE",
-      headers: {
-        "Content-type": "application/json",
-      },
-    });
-    setTasks(tasks.filter((task) => task.id !== taskId));
-  };
-
+  //-----------------------------------------------------
   function deleteHandler(id) {
-    Alert.alert("Delete Task", "Are you sure you want to delete this task?", [
+    Alert.alert("Supprimer la tache", "voulez vous vraiment supprimer cette tache?", [
       {
-        text: "Cancel",
+        text: "Annuler",
         style: "cancel",
       },
       {
-        text: "Delete",
-        onPress: () => deleteTask(id),
+        text: "Supprimer",
+        onPress: async () => {
+          try {
+            await deleteTask(id)
+
+            const user_id = await AsyncStorage.getItem("user_id");
+            if (!user_id) {
+              throw new Error("User ID not found in AsyncStorage");
+            }
+            
+            await fetchTasks(user_id);
+
+            Alert.alert("Succès", "La tâche a été supprimée avec succès.");
+          }catch(error){
+            console.error("Error deleting task:", error.message);
+            Alert.alert("Erreur", "La suppression de la tâche a échoué. Veuillez réessayer.");
+          }
+        },
         style: "destructive",
       },
     ]);
@@ -148,9 +125,9 @@ function TasksListScreen() {
 
   const data = categories.map((category) => {
     const tasksForCategory = tasks.filter((task) => {
-      console.log(
+      /*console.log(
         `Comparing category.id: ${category.id} with task.category: ${task.category}`
-      );
+      );*/
       return task.category === category.id;
     });
 
@@ -162,14 +139,15 @@ function TasksListScreen() {
     };
   });
 
+  //--------------------------------------------------------
   function handleModify(id) {
-    Alert.alert("Modify Task", "Do you want to modify this task?", [
+    Alert.alert("Modifier la tache", "voulez vous vraiment modifier cette tache?", [
       {
-        text: "Cancel",
+        text: "Annuler",
         style: "cancel",
       },
       {
-        text: "Modify",
+        text: "Modifier",
         onPress: () =>
           navigation.navigate("Modifier la tache", {
             taskId: id,
@@ -180,18 +158,22 @@ function TasksListScreen() {
     ]);
   }
 
+  //------------------------------------------------------------
   function handleAddTask() {
     if (!categories || categories.length === 0) {
       alert("Aucune catégorie disponible.");
       return;
     }
+    
     navigation.navigate("Ajouter une tache", {
       categs: categories,
     });
   }
 
-  function handleCheck(id) {
+  //----------------------------------------------------------
+  const handleCheck = async (id) => {
     const updatedCheckedTasks = new Set(checkedTasks);
+    const isCompleted = updatedCheckedTasks.has(id);
 
     if (updatedCheckedTasks.has(id)) {
       updatedCheckedTasks.delete(id);
@@ -200,8 +182,44 @@ function TasksListScreen() {
     }
 
     setCheckedTasks(updatedCheckedTasks);
+
+    try{
+      user_id = await AsyncStorage.getItem('user_id');
+
+      //console.log('userId when modifying checkbox : ', user_id)
+
+      const response = await fetch(`http://172.20.10.13:8000/api/tasks/${id}/`, {
+        method: 'PATCH',
+        headers: {
+          "Content-type": "application/json",
+        },
+        body: JSON.stringify({ completed: !isCompleted })
+      });
+
+      if (!response.ok) {
+        throw new Error(`HTTP Error: ${response.status}`);
+      }
+
+      await fetchTasks(user_id);
+
+    }catch(error){
+      console.error("Error updating task:", error.message);
+
+      setCheckedTasks((prev) => {
+        const revertedCheckedTasks = new Set(prev);
+        if (isCompleted) {
+          revertedCheckedTasks.add(id); 
+        } else {
+          revertedCheckedTasks.delete(id); 
+        }
+        return revertedCheckedTasks;
+      });
+
+      Alert.alert("Error", "Failed to update task. Please try again.");
+    }
   }
 
+  //-------------------------------------------------------------
   function renderItem(itemData) {
     if (itemData.item.type === "category") {
       return (
@@ -234,6 +252,7 @@ function TasksListScreen() {
       );
     }
   }
+
 
   if (loading) {
     return (
