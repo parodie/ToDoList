@@ -7,7 +7,6 @@ It provides a mobile interface for users to create, update, and manage their tas
 
 ## Tech Stack
 - **Frontend:** React Native (Expo)  
-- **Database:** SQLite (local storage)  
 - **Other:** React Navigation, React Hooks  
 
 ---
